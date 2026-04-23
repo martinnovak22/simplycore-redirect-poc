@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["S3P45SYX2M.com.simplycore.air"],
+        "components": [
+          { "/": "/code=*" }
+        ]
+      }
+    ]
+  }
+}
