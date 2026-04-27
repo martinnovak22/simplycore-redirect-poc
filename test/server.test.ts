@@ -81,6 +81,33 @@ describe('redirect /code=:authCode', () => {
   });
 });
 
+describe('preview for unfurler bots', () => {
+  it('Slackbot gets HTML with OG tags, not a redirect', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/code=feeab8a51df53b21dbad6a2230ac5bd0',
+      headers: { 'user-agent': 'Slackbot-LinkExpanding 1.0' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.body).toContain('property="og:title"');
+    expect(res.body).toContain('SimplyControl');
+    expect(res.body).toContain('property="og:image"');
+    expect(res.body).toContain('twitter:card');
+  });
+
+  it('WhatsApp preview HTML includes a JS fallback redirect', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/code=abc',
+      headers: { 'user-agent': 'WhatsApp/2.23.24.76 A' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toContain('location.replace');
+    expect(res.body).toContain('simplycontrol.cz');
+  });
+});
+
 describe('root', () => {
   it('GET / returns health payload', async () => {
     const res = await app.inject({ method: 'GET', url: '/' });

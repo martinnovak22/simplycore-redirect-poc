@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseUA } from '../src/ua.ts';
+import { isUnfurlerBot, parseUA } from '../src/ua.ts';
 
 describe('parseUA', () => {
   const cases: Array<[label: string, ua: string, expected: 'ios' | 'android' | 'other']> = [
@@ -16,5 +16,30 @@ describe('parseUA', () => {
 
   it.each(cases)('%s → %s', (_label, ua, expected) => {
     expect(parseUA(ua)).toBe(expected);
+  });
+});
+
+describe('isUnfurlerBot', () => {
+  const bots: Array<[string, string]> = [
+    ['Slackbot', 'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)'],
+    ['WhatsApp', 'WhatsApp/2.23.24.76 A'],
+    ['Facebook', 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'],
+    ['Twitter', 'Twitterbot/1.0'],
+    ['Telegram', 'TelegramBot (like TwitterBot)'],
+    ['Discord', 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)'],
+    ['LinkedIn', 'LinkedInBot/1.0 (compatible; Mozilla/5.0; Apache-HttpClient +http://www.linkedin.com)'],
+    ['iMessage (Applebot)', 'Mozilla/5.0 (compatible; Applebot/0.1; +http://www.apple.com/go/applebot)'],
+  ];
+  it.each(bots)('detects %s', (_label, ua) => {
+    expect(isUnfurlerBot(ua)).toBe(true);
+  });
+
+  const humans: Array<[string, string]> = [
+    ['iPhone Safari', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15'],
+    ['Desktop Chrome', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0'],
+    ['Empty UA', ''],
+  ];
+  it.each(humans)('does not match %s', (_label, ua) => {
+    expect(isUnfurlerBot(ua)).toBe(false);
   });
 });

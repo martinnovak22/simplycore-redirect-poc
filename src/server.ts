@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { config } from './config.ts';
-import { parseUA } from './ua.ts';
+import { isUnfurlerBot, parseUA } from './ua.ts';
+import { renderPreviewHtml } from './preview.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const wellKnownDir = join(here, '..', 'public', '.well-known');
+const publicDir = join(here, '..', 'public');
+const wellKnownDir = join(publicDir, '.well-known');
 
 const aasaBody = readFileSync(
   join(wellKnownDir, 'apple-app-site-association'),
@@ -17,6 +19,7 @@ const assetlinksBody = readFileSync(
   join(wellKnownDir, 'assetlinks.json'),
   'utf8',
 );
+const previewImage = readFileSync(join(publicDir, 'preview.png'));
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: true });
@@ -33,16 +36,36 @@ export function buildApp(): FastifyInstance {
       .send(assetlinksBody);
   });
 
+  app.get('/preview.png', async (_req, reply) => {
+    return reply
+      .header('content-type', 'image/png')
+      .header('cache-control', 'public, max-age=86400')
+      .send(previewImage);
+  });
+
   app.get<{ Params: { authCode: string } }>(
     '/code=:authCode',
     async (req, reply) => {
-      const platform = parseUA(req.headers['user-agent'] ?? '');
+      const ua = req.headers['user-agent'] ?? '';
+      const platform = parseUA(ua);
       const target =
         platform === 'ios'
           ? config.iosStoreUrl
           : platform === 'android'
             ? config.androidStoreUrl
             : config.fallbackUrl;
+
+      if (isUnfurlerBot(ua)) {
+        const canonical = `${config.publicBaseUrl}/code=${req.params.authCode}`;
+        req.log.info(
+          { authCode: req.params.authCode, ua, kind: 'unfurl' },
+          'preview',
+        );
+        return reply
+          .header('content-type', 'text/html; charset=utf-8')
+          .header('cache-control', 'public, max-age=300')
+          .send(renderPreviewHtml(canonical, target));
+      }
 
       req.log.info(
         { authCode: req.params.authCode, platform, target },
